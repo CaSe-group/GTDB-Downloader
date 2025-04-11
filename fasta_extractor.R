@@ -104,7 +104,7 @@ if (!tolower(response) %in% c("y", "yes")) {
 }
 
 ## Accession write (for datasets tool)
-fwrite(selection[1:2, ], "download_accession_list.txt", col.names = FALSE)
+fwrite(selection, "download_accession_list.txt", col.names = FALSE)
 
 ## Genomes download
 system("./datasets download genome accession --inputfile download_accession_list.txt --dehydrated --include genome")
