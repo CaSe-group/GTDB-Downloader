@@ -11,6 +11,6 @@ This tool automates the download of bacterial genomes from the GTDB (Genome Taxo
 - Representative: Filter GTDB representative genomes ("t" for yes, "f" for no).
 - Dryrun (optional): Preview results without downloading - dryrun FALSE still require confirmation before downloading ("TRUE" or "FALSE").
 ## Example command
-'''
+``` bash
 ./fasta_extractor.R 'Pseudomonas aeruginosa' 'species' 't'
-''' 
+``` 
