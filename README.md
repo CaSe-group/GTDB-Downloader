@@ -16,7 +16,7 @@ This tool automates the download of bacterial genomes from the GTDB (Genome Taxo
   Options: "t" (yes), "f" (no)
 - `-m`, `--domain`: Domain selection (default: "bacteria")  
   Options: "bacteria", "archaea"
-- `-db`, `--database`: Custom metadata file path (default: downloads GTDB metadata)
+- `-db`, `--database`: Custom metadata file path (default: downloads GTDB metadata for bacteria)
 - `-d`, `--dryrun`: Preview without downloading (flag, no value needed)
 - `-o`, `--output_dir`: Output directory (default: "output")
 
