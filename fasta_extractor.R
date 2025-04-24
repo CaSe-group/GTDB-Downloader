@@ -1,48 +1,125 @@
 #!/usr/bin/env Rscript
-require(data.table)
+
+suppressMessages(require(data.table))
+suppressMessages(require(R.utils))
 
 ### Parameters
 args <- commandArgs(trailingOnly = TRUE)
-name_selection <- args[1]
-## name_selection <- "Escherichia coli"
-output_dir <- "output"
-taxrank <- args[2] ## "phylium", "class", "order", "family", "genus", "species"
-## taxrank <- "species"
-representative_check <- args[3] ## 't' or 'f'
-## representative_check <- "t"
-dryrun <- args[4] ## "FALSE" "TRUE"
-dryrun <- ifelse(length(args) >= 4, as.logical(args[4]), FALSE)
 
+### Defaults 
+name_selection <- NULL
+taxrank <- "species"
+representative <- "t"
+dryrun <- FALSE
+output_dir <- "output"
+domain <- "bacteria"  
+database_file <- NULL 
+
+# Parse named arguments
+i <- 1
+while (i <= length(args)) {
+  if (args[i] %in% c("--name_selection", "-n")) {
+    name_selection <- args[i+1]
+    i <- i + 2
+  } else if (args[i] %in% c("--taxrank", "-t")) {
+    taxrank <- args[i+1]
+    i <- i + 2
+  } else if (args[i] %in% c("--representative_check", "-r")) {
+    representative_check <- args[i+1]
+    i <- i + 2
+  } else if (args[i] %in% c("--dryrun", "-d")) {
+    dryrun <- TRUE
+    i <- i + 1
+  } else if (args[i] %in% c("--output_dir", "-o")) {
+    output_dir <- args[i+1]
+    i <- i + 2
+  } else if (args[i] %in% c("--domain", "-m")) {  
+    domain <- tolower(args[i+1])
+    if (!domain %in% c("bacteria", "archaea")) {
+      stop("Domain must be either 'bacteria' or 'archaea'")
+    }
+    i <- i + 2
+  } else if (args[i] %in% c("--database", "-db")) {  
+    database_file <- args[i+1]
+    i <- i + 2
+  } else if (args[i] %in% c("--help", "-h")) {
+    cat("Usage: fasta_extractor [options]\n")
+    cat("Options:\n")
+    cat("  -n, --name_selection <name>   Name of the taxon to select (required)\n")
+    cat("  -t, --taxrank <rank>         Taxonomic rank [default: species]\n")
+    cat("  -r, --representative_check <t/f> Check for representative genomes [default: t]\n")
+    cat("  -d, --dryrun                 Dry run (no actual processing) [default: FALSE]\n")
+    cat("  -o, --output_dir <dir>       Output directory [default: output]\n")
+    cat("  -m, --domain <domain>        Domain (bacteria or archaea) [default: bacteria]\n")
+    cat("  -db, --database <file>       Custom database file path\n")
+    cat("  -h, --help                   Show this help message\n")
+    quit()
+  } else {
+    # Fallback to positional arguments
+    if (is.null(name_selection)) name_selection <- args[i]
+    else if (i == 2) taxrank <- args[i]
+    else if (i == 3) representative_check <- args[i]
+    else if (i == 4) dryrun <- as.logical(args[i])
+    i <- i + 1
+  }
+}
+
+# Check if name_selection was givven
+if (is.null(name_selection)) {
+  stop("Error: --name_selection argument is required\nUse --help for usage information", call. = FALSE)
+}
 ############################
 ## NOTE: 2. Tool download ##
 ############################
 
-## File check
-file_detection <- list.files()
-required_files <- c("bac120_metadata_r220.tsv.gz", "bac120_metadata_r220.tsv", "datasets")
-file_check <- required_files %in% file_detection
+### Database
+if (!is.null(database_file)) {
+  # Custom database
+  if (!file.exists(database_file)) {
+    stop(paste("Specified database file not found:", database_file))
+  }
+  cat("Loading custom database from:", database_file, "\n")
+  data <- fread(database_file)
+} else {
+  # NOTE: DATABASE UPDATE MODIFY JUST THIS LINES
+  # Default GTDB database
+  if (domain == "bacteria") {
+    default_files <- c("bac120_metadata_r220.tsv.gz", "bac120_metadata_r220.tsv")
+    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release220/220.0/bac120_metadata_r220.tsv.gz"
+  } else if (domain == "archaea") {
+    default_files <- c("ar53_metadata_r220.tsv.gz", "ar53_metadata_r220.tsv")
+    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release220/220.0/ar53_metadata_r220.tsv.gz"
+  }
 
-## GTDB database
-if (file_check[1] == FALSE & file_check[2] == FALSE) {
-        data <- fread(
-                "https://data.ace.uq.edu.au/public/gtdb/data/releases/release220/220.0/bac120_metadata_r220.tsv.gz",
-                header = TRUE
-        )
-        fwrite(data, "bac120_metadata_r220.tsv", sep = "\t")
-} else if (file_check[1] == TRUE) {
-        print("GTDB database found, loading...")
-        data <- fread(required_files[1])
-} else if (file_check[2] == TRUE) {
-        print("GTDB database found, loading...")
-        data <- fread(required_files[2])
+## File check
+  file_detection <- list.files()
+  file_check <- default_files %in% file_detection
+
+  if (!any(file_check)) {
+    cat("Downloading", domain, "metadata from GTDB...\n")
+    data <- fread(download_url, header = TRUE)
+    local_file <- default_files[2]  # Save as uncompressed TSV
+    fwrite(data, local_file, sep = "\t")
+    cat("Saved database to:", local_file, "\n")
+  } else {
+    existing_file <- default_files[which(file_check)[1]]
+    cat("GTDB", domain, "database found, loading:", existing_file, "\n")
+    data <- fread(existing_file)
+  }
 }
 
 ## NCBI dataset
-if (file_check[3] == FALSE) {
-        download.file("https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets", "datasets")
-        system("chmod +x datasets")
+if (!file.exists("datasets")) {
+  cat("Downloading NCBI datasets CLI tool...\n")
+  download.file(
+    "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets",
+    "datasets",
+    quiet = TRUE  
+  )
+  system("chmod +x datasets", ignore.stdout = TRUE, ignore.stderr = TRUE)
+  cat("NCBI datasets CLI tool installed and made executable\n")
 } else {
-        print("NCBI dataset CLI tool found")
+  cat("NCBI datasets CLI tool found\n")
 }
 
 #################
@@ -67,7 +144,7 @@ tax_split <- function(dt) {
 processed_data <- tax_split(data)
 
 selection <- processed_data[
-        get(taxrank) == name_selection & gtdb_representative == representative_check, c("ncbi_genbank_assembly_accession")
+        get(taxrank) == name_selection & gtdb_representative == representative, c("ncbi_genbank_assembly_accession")
 ]
 
 ## User confirmation and sample count check
@@ -118,7 +195,7 @@ file.rename(
 
 ## Cleanup
 rm_list <- c("download_accession_list.txt", "ncbi_dataset.zip", "md5sum.txt", "README.md")
-file.remove(rm_list)
-system("rm -r ncbi_dataset")
+suppressMessages(file.remove(rm_list))
+suppressMessages(system("rm -r ncbi_dataset"))
 
 print("Download completed")
