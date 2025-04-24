@@ -84,11 +84,11 @@ if (!is.null(database_file)) {
   # NOTE: DATABASE UPDATE MODIFY JUST THIS LINES
   # Default GTDB database
   if (domain == "bacteria") {
-    default_files <- c("bac120_metadata_r220.tsv.gz", "bac120_metadata_r220.tsv")
-    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release220/220.0/bac120_metadata_r220.tsv.gz"
+    default_files <- c("bac120_metadata_r226.tsv.gz", "bac120_metadata_r226.tsv")
+    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release226/226.0/bac120_metadata_r226.tsv.gz"
   } else if (domain == "archaea") {
-    default_files <- c("ar53_metadata_r220.tsv.gz", "ar53_metadata_r220.tsv")
-    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release220/220.0/ar53_metadata_r220.tsv.gz"
+    default_files <- c("ar53_metadata_r226.tsv.gz", "ar53_metadata_r226.tsv")
+    download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release226/226.0/ar53_metadata_r226.tsv.gz"
   }
 
 ## File check
