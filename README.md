@@ -1,5 +1,5 @@
 # GTDB-Downloader
-WORK IN PROGRESS Tool to download GTDB samples 
+Tool to download GTDB samples 
 ## Description
 This tool automates the download of bacterial genomes from the GTDB (Genome Taxonomy Database) via NCBI accession. . It retrieves genome assembly accessions matching a given taxonomic rank and name and gtdb_representative status, then uses the NCBI Datasets CLI tool to download corresponding genomic data. It automatically download (and store) datasets tool and GTDB database. It provides dry run and requre user confirmation before downloading samples.
 ## Dependendencies 
