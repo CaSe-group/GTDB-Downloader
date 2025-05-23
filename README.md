@@ -27,3 +27,6 @@ This tool automates the download of bacterial genomes from the GTDB (Genome Taxo
 ```bash
 ./fasta_extractor.R -n "Pseudomonas aeruginosa" -t species -r t
 ```
+## Acknowledgments
+This tool utilizes metadata from [**GTDB release 226**](https://gtdb.ecogenomic.org/) and [**NCBI Datasets**](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/) to access NCBI genome repository. We acknowledge the valuable contributions of the GTDB and NCBI teams in providing these resources.
+
