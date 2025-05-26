@@ -259,9 +259,32 @@ if (nrow(selection) == 0) {
                 cat(yellow(paste0(
                         "Taxid used with GTDB representative genome...\n",
                         "Guessing GTDB species using NCBI taxonomy\n",
-                        "Guessed species:", ncbi_name
+                        "Guessed species:", ncbi_name, "\n"
                 )))
         }
+}
+
+if (nrow(selection) == 0 & representative == "t") {
+        ncbi_name <- processed_data[ncbi_species_taxid == name_selection, ncbi_species][1]
+        selection <- processed_data[
+                ncbi_species == ncbi_name & gtdb_representative == representative,
+                c("ncbi_genbank_assembly_accession")
+        ]
+        if (nrow(selection) > 1) {
+                setcolorder(processed_data, c("gtdb_taxonomy", "ncbi_taxonomy"), after = ncol(processed_data))
+                setcolorder(processed_data, "ncbi_genbank_assembly_accession", before = 1)
+                fwrite(processed_data[processed_data$ncbi_genbank_assembly_accession %in% selection$ncbi_genbank_assembly_accession, ], file = paste0(output_dir, "/ambiguise_samples_report.csv"))
+                cat(red(paste0("Ambiguise samples found based on pure NCBI taxonomy\n", "Sample count found: ", nrow(selection), "\n Ambiguise samples output printed to:", output_dir, "/ambiguise_samples_report.csv file")))
+                quit()
+        }
+        cat(green(paste0(
+                "Using pure NCBI taxonomy: ", "\n",
+                "NCBI Species:", ncbi_name, "\n",
+                "GTDB Species:", processed_data[
+                        ncbi_species == ncbi_name & gtdb_representative == representative,
+                        c("species")
+                ], "\n"
+        )))
 }
 
 ## User confirmation and sample count check
@@ -324,6 +347,7 @@ invisible(file.rename(
 if (report == TRUE) {
         setcolorder(processed_data, c("gtdb_taxonomy", "ncbi_taxonomy"), after = ncol(processed_data))
         setcolorder(processed_data, "ncbi_genbank_assembly_accession", before = 1)
+
         fwrite(processed_data[processed_data$ncbi_genbank_assembly_accession %in% selection$ncbi_genbank_assembly_accession, ], file = paste0(output_dir, "/download_report.csv"))
 }
 
