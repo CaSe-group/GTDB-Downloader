@@ -7,7 +7,7 @@ This tool automates the download of bacterial genomes from the GTDB (Genome Taxo
 - data.table R package (should be installed automatically)
 - R.utils R package (should be installed automatically)
 ### Required
-- `-n`, `--name`: Taxonomic name to query (e.g., "Escherichia coli")
+- `-n`, `--name`: Taxonomic GTDB name, NCBI name, taxid or species taxid to query (e.g., "Escherichia coli", "562")
 
 ### Optional
 - `-t`, `--taxrank`: Taxonomic rank (default: "species")
@@ -19,8 +19,8 @@ This tool automates the download of bacterial genomes from the GTDB (Genome Taxo
 - `-o`, `--output_dir`: Output directory (default: "output")
 - `-r`, `--report`: Create a report with each sample accession number and taxonomy (flag, no value needed)
 - `-d`, `--dryrun`: Preview without downloading (flag, no value needed)
-- `-db`, `--database`: Custom metadata path
-- `-dp`, `--dataset_path`: Path to dataset tool (not required)
+- `-db`, `--database`: Custom GTDB metadata path
+- `-dp`, `--dataset_path`: Path to NCBI dataset tool (not required)
 - `-ni`, `--non_interactive`: Do not ask for confirmation before downloading genomes (flag, no value needed)
 
 ## Example Commands
