@@ -27,7 +27,6 @@ output_dir <- "output"
 domain <- "bacteria"
 database_file <- NULL
 non_interactive <- FALSE
-dataset_path <- NULL
 report <- FALSE
 
 ##################
@@ -205,32 +204,64 @@ if (!("species" %in% colnames(data)) && !("ncbi_species" %in% colnames(data))) {
         rm(data)
 }
 ## Tax id
-## Selection fallback taxrank > ncbi_species_taxid > ncbi_taxid
+## Selection fallback taxrank > ncbi_taxid > ncbi_species_taxid
+
 selection <- processed_data[
         get(taxrank) == name_selection & gtdb_representative == representative,
         c("ncbi_genbank_assembly_accession")
 ]
+
 if (nrow(selection) == 0) {
         selection <- processed_data[
-                ncbi_taxid == name_selection & gtdb_representative == representative,
+                paste0("ncbi_", get(taxrank)) == name_selection & gtdb_representative == representative,
                 c("ncbi_genbank_assembly_accession")
         ]
         cat(yellow("No GTDB taxonomy name found falling back to NCBI taxonomical rank name\n"))
         cat(yellow("For the optimal results please use GTDB taxonomy ranks\n"))
 }
+
 if (nrow(selection) == 0) {
-        selection <- processed_data[
-                ncbi_species_taxid == name_selection & gtdb_representative == representative,
-                c("ncbi_genbank_assembly_accession")
-        ]
-        cat(yellow("No taxonomical rank name found falling back to NCBI Species Taxid\n"))
-}
-if (nrow(selection) == 0) {
-        selection <- processed_data[
-                ncbi_taxid == name_selection & gtdb_representative == representative,
-                c("ncbi_genbank_assembly_accession")
-        ]
         cat(yellow("No NCBI Species Taxid found falling back to NCBI Taxid\n"))
+        if (representative == "f") {
+                selection <- processed_data[
+                        ncbi_taxid == name_selection,
+                        c("ncbi_genbank_assembly_accession")
+                ]
+        } else if (representative == "t") {
+                ncbi_name <- processed_data[ncbi_taxid == name_selection, ncbi_species][1]
+                selection <- processed_data[
+                        species == ncbi_name &
+                                gtdb_representative == representative,
+                        c("ncbi_genbank_assembly_accession")
+                ]
+                cat(yellow(paste0(
+                        "Taxid used with GTDB representative genome...\n",
+                        "Guessing GTDB species using NCBI taxonomy\n",
+                        "Guessed species: ", ncbi_name, "\n"
+                )))
+        }
+}
+
+if (nrow(selection) == 0) {
+        cat(yellow("No NCBI Taxid found falling back to Species Taxid \n"))
+        if (representative == "f") {
+                selection <- processed_data[
+                        ncbi_species_taxid == name_selection & gtdb_representative == representative,
+                        c("ncbi_genbank_assembly_accession")
+                ]
+        } else if (representative == "t") {
+                ncbi_name <- processed_data[ncbi_species_taxid == name_selection, ncbi_species][1]
+                selection <- processed_data[
+                        species == ncbi_name & gtdb_representative == representative,
+                        c("ncbi_genbank_assembly_accession")
+                ]
+
+                cat(yellow(paste0(
+                        "Taxid used with GTDB representative genome...\n",
+                        "Guessing GTDB species using NCBI taxonomy\n",
+                        "Guessed species:", ncbi_name
+                )))
+        }
 }
 
 ## User confirmation and sample count check
