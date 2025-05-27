@@ -89,16 +89,16 @@ while (i <= length(args)) {
                 i <- i + 2
         } else if (args[i] %in% c("--non_interactive", "-ni")) {
                 non_interactive <- TRUE
-                i <- i + 2
-        } else if (args[i] %in% c("--report", "-r")) {
+                i <- i + 1
+        } else if (args[i] %in% c("--report")) {
                 report <- TRUE
-                i <- i + 2
+                i <- i + 1
         } else if (args[i] %in% c("--dataset_path", "-dp")) {
                 dataset_path <- args[i + 1]
                 i <- i + 2
         } else if (args[i] %in% c("--verbose", "-v")) {
                 verbose <- TRUE
-                i <- i + 2
+                i <- i + 1
         } else if (args[i] %in% c("--help", "-h")) {
                 cat("Usage: fasta_extractor [options]\n")
                 cat("Example command:\n")
@@ -113,7 +113,7 @@ while (i <= length(args)) {
                 cat("  -db, --database <file>       Custom database file path\n")
                 cat("  -dp, --dataset_path          Path to dataset tool (not required)\n")
                 cat("  -ni, --non_interactive       Do not ask for confirmation before downloading genomes\n")
-                cat("  -r, --report                 Create a report with each sample accession number and taxonomy\n")
+                cat("  --report                     Create a report with each sample accession number and taxonomy\n")
                 cat("  -v, --verbose                Verbose command output\n")
                 cat("  -h, --help                   Show this help message\n")
                 quit()
@@ -124,7 +124,7 @@ while (i <= length(args)) {
                 } else if (i == 2) {
                         taxrank <- args[i]
                 } else if (i == 3) {
-                        representative_check <- args[i]
+                        representative <- args[i]
                 } else if (i == 4) dryrun <- as.logical(args[i])
                 i <- i + 1
         }
@@ -134,6 +134,11 @@ while (i <= length(args)) {
 if (is.null(name_selection)) {
         stop(red("--name argument is required\nUse --help for usage information"), call. = FALSE)
 }
+### Parameters
+cat("Parameters:", "\n")
+cat("Name:", name_selection, "\n")
+cat("Representative mode:", representative, "\n")
+cat("Taxonomical rank:", taxrank, "\n")
 ############################
 ## NOTE: 2. Tool download ##
 ############################
@@ -232,6 +237,7 @@ if (nrow(selection) == 0) {
                 cat(yellow("No NCBI Species Taxid found falling back to NCBI Taxid\n"))
         }
         if (representative == "f") {
+                ncbi_name <- processed_data[ncbi_taxid == name_selection, ncbi_species][1]
                 selection <- processed_data[
                         ncbi_taxid == name_selection,
                         c("ncbi_genbank_assembly_accession")
@@ -243,17 +249,16 @@ if (nrow(selection) == 0) {
                                 gtdb_representative == representative,
                         c("ncbi_genbank_assembly_accession")
                 ]
+        }
+        if (verbose == TRUE) {
+                cat(yellow("Taxid used with GTDB representative genome...\n"))
+        }
 
-                if (verbose == TRUE) {
-                        cat(yellow("Taxid used with GTDB representative genome...\n"))
-                }
-
-                if (nrow(selection) > 0) {
-                        cat(yellow(paste0(
-                                "Guessing GTDB species using NCBI taxonomy\n",
-                                "Guessed species: ", ncbi_name, "\n"
-                        )))
-                }
+        if (nrow(selection) > 0) {
+                cat(yellow(paste0(
+                        "Guessing GTDB species using NCBI taxonomy\n",
+                        "Guessed species: ", ncbi_name, "\n"
+                )))
         }
 }
 
@@ -263,7 +268,7 @@ if (nrow(selection) == 0) {
         }
         if (representative == "f") {
                 selection <- processed_data[
-                        ncbi_species_taxid == name_selection & gtdb_representative == representative,
+                        ncbi_species_taxid == name_selection,
                         c("ncbi_genbank_assembly_accession")
                 ]
         } else if (representative == "t") {
@@ -272,13 +277,10 @@ if (nrow(selection) == 0) {
                         species == ncbi_name & gtdb_representative == representative,
                         c("ncbi_genbank_assembly_accession")
                 ]
-
                 if (verbose == TRUE) {
                         cat(yellow("Taxid used with GTDB representative genome...\n"))
                 }
-
                 if (nrow(selection) > 0) {
-                        cat(yellow("Taxid used with GTDB representative genome...\n"))
                         cat(yellow(paste0(
                                 "Guessing GTDB species using NCBI taxonomy\n",
                                 "Guessed species:", ncbi_name, "\n"
