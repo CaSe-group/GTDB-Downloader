@@ -1,9 +1,9 @@
 #!/usr/bin/env Rscript
 suppressMessages(
         for (package in c("data.table", "R.utils")) {
-                if (!require(package, character.only = T, quietly = T)) {
+                if (!require(package, character.only = TRUE, quietly = TRUE)) {
                         install.packages(package)
-                        library(package, character.only = T)
+                        library(package, character.only = TRUE)
                 }
         }
 )
@@ -19,7 +19,7 @@ suppressMessages(
 args <- commandArgs(trailingOnly = TRUE)
 
 ### Defaults
-name_selection <- "623"
+name_selection <- NULL
 taxrank <- "species"
 representative <- "t"
 dryrun <- FALSE
@@ -39,7 +39,7 @@ red <- function(x) paste0("\033[1;31m", x, "\033[0m")
 
 tax_split <- function(dt) {
         ## tax split
-        tax_levels <- c("phylium", "class", "order", "family", "genus", "species")
+        tax_levels <- c("phylum", "class", "order", "family", "genus", "species")
         dt[, (tax_levels) := tstrsplit(gtdb_taxonomy, ";")[2:7]]
         ## Pref remove
         for (col in tax_levels) {
@@ -50,7 +50,7 @@ tax_split <- function(dt) {
 
 tax_split_ncbi <- function(dt) {
         ## tax split
-        tax_levels <- c("ncbi_phylium", "ncbi_class", "ncbi_order", "ncbi_family", "ncbi_genus", "ncbi_species")
+        tax_levels <- c("ncbi_phylum", "ncbi_class", "ncbi_order", "ncbi_family", "ncbi_genus", "ncbi_species")
         dt[, (tax_levels) := tstrsplit(ncbi_taxonomy, ";")[2:7]]
         ## Pref remove
         for (col in tax_levels) {
@@ -77,6 +77,8 @@ while (i <= length(args)) {
                 i <- i + 1
         } else if (args[i] %in% c("--output_dir", "-o")) {
                 output_dir <- args[i + 1]
+                # Remove trailing slash if it exists
+                output_dir <- sub("/$", "", output_dir)
                 i <- i + 2
         } else if (args[i] %in% c("--domain", "-m")) {
                 domain <- tolower(args[i + 1])
@@ -116,7 +118,7 @@ while (i <= length(args)) {
                 cat("  --report                     Create a report with each sample accession number and taxonomy\n")
                 cat("  -v, --verbose                Verbose command output\n")
                 cat("  -h, --help                   Show this help message\n")
-                quit()
+                quit(status = 0)
         } else {
                 # Fallback to positional arguments
                 if (is.null(name_selection)) {
@@ -134,15 +136,20 @@ while (i <= length(args)) {
 if (is.null(name_selection)) {
         stop(red("--name argument is required\nUse --help for usage information"), call. = FALSE)
 }
-### Parameters
+#####################
+## Parameter print ##
+#####################
 cat("Parameters:", "\n")
 cat("Name:", name_selection, "\n")
 cat("Representative mode:", representative, "\n")
 cat("Taxonomical rank:", taxrank, "\n")
+if (verbose == TRUE) {
+        cat("Verbose mode", "\n")
+}
 ############################
 ## NOTE: 2. Tool download ##
 ############################
-
+dir.create(output_dir)
 ### Database
 if (!is.null(database_file)) {
         # Custom database
@@ -299,21 +306,22 @@ if (nrow(selection) == 0) {
 
 if (nrow(selection) == 0 & representative == "t") {
         ncbi_name <- processed_data[ncbi_species_taxid == name_selection, ncbi_species][1]
-
         gtdb_name <- processed_data[
                 ncbi_species == ncbi_name,
                 c("species")
         ]
         species_count <- as.data.frame(table(gtdb_name))
-        if (nrow(species_count) > 1 & nrow(species_count != 0)) {
-                setcolorder(processed_data, c("gtdb_taxonomy", "ncbi_taxonomy"), after = ncol(processed_data))
-                setcolorder(processed_data, "ncbi_genbank_assembly_accession", before = 1)
-                fwrite(processed_data[processed_data$ncbi_genbank_assembly_accession %in% selection$ncbi_genbank_assembly_accession, ], file = paste0(output_dir, "/ambiguise_samples_report.csv"))
-                cat(red(paste0("Ambiguise samples found based on pure NCBI taxonomy\n", "Sample count found: ", nrow(selection), "\n Ambiguise samples output printed to:", output_dir, "/ambiguise_samples_report.csv file")))
-                quit()
+        if (nrow(species_count) > 1 | nrow(species_count == 0)) {
+                cat(red(paste0(
+                        "Ambiguous samples found based on pure NCBI taxonomy\n",
+                        "Taxonomic ranks found: ", nrow(species_count), "\n",
+                        "Ambiguous samples:\n",
+                        paste(unique(species_count$species), collapse = ", ")
+                )))
+                quit(status = 156)
         } else {
                 selection <- processed_data[
-                        species == gtdb_name[1] & gtdb_representative == "t",
+                        species == gtdb_name & gtdb_representative == "t",
                         c("ncbi_genbank_assembly_accession")
                 ]
         }
@@ -343,13 +351,13 @@ if (n_records == 0) {
         } else {
                 cat(red("No similar species found\n"))
         }
-        quit(status = 0)
+        quit(status = 150)
 } else {
         cat(green(paste0("\n", name_selection, " ", n_records, " records found.\n")))
 }
 if (dryrun == TRUE) {
         cat(yellow("Dryrun mode activated quitting"))
-        quit()
+        quit(status = 0)
 } else {
         cat("Would you like to proceed with the download? [y/n]: ")
 }
@@ -359,7 +367,7 @@ if (non_interactive == TRUE) {
         response <- readLines("stdin", n = 1)
         if (!tolower(response) %in% c("y", "yes")) {
                 cat("Aborting at user request.\n")
-                quit(status = 0)
+                quit(status = 1)
         }
 }
 
@@ -374,7 +382,7 @@ if (!exists(quote(dataset_path))) {
 }
 if (verbose == TRUE) {
         invisible(system(paste0(dataset_path_input, "download genome accession --inputfile download_accession_list.txt --dehydrated --include genome")))
-} else {
+} else if (verbose == FALSE) {
         system(paste0(dataset_path_input, "download genome accession --inputfile download_accession_list.txt --dehydrated --include genome"))
 }
 
@@ -383,11 +391,10 @@ unzip("ncbi_dataset.zip")
 
 if (verbose == TRUE) {
         system(paste0(dataset_path_input, "rehydrate --directory ."))
-} else {
+} else if (verbose == FALSE) {
         invisible(system(paste0(dataset_path_input, "rehydrate --directory .")))
 }
 
-dir.create(output_dir)
 invisible(file.rename(
         from = list.files(path = "ncbi_dataset/data/", pattern = "\\.fna$", recursive = TRUE, full.names = TRUE),
         to = file.path(paste0("./", output_dir), basename(list.files("ncbi_dataset/data/", "\\.fna$", recursive = TRUE)))
@@ -405,4 +412,11 @@ rm_list <- c("download_accession_list.txt", "ncbi_dataset.zip", "md5sum.txt", "R
 invisible(file.remove(rm_list))
 invisible(system("rm -r ncbi_dataset"))
 
-cat(green("Download completed"))
+fna_files <- list.files(path = file.path("./", output_dir), pattern = "\\.fna$", full.names = TRUE)
+
+if (length(fna_files) > 0) {
+        cat(green("Download completed\n"))
+} else {
+        cat(red("Download failed, no genomes were downloaded"))
+        quit(status = 155)
+}
