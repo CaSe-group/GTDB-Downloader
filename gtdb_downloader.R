@@ -149,7 +149,10 @@ if (!is.null(database_file)) {
         if (!file.exists(database_file)) {
                 stop(paste("Specified database file not found:", database_file))
         }
-        cat("Loading custom database from:", database_file, "\n")
+
+        if (verbose == TRUE) {
+                cat("Loading custom database from:", database_file, "\n")
+        }
         data <- fread(database_file)
 } else {
         # NOTE: DATABASE UPDATE MODIFY JUST THIS LINES
@@ -183,7 +186,10 @@ if (!is.null(database_file)) {
                 cat("Saved database to:", local_file, "\n")
         } else {
                 existing_file <- default_files[which(file_check)[1]]
-                cat(green(paste("GTDB", domain, "database found, loading:", existing_file, "\n")))
+
+                if (verbose == TRUE) {
+                        cat(green(paste("GTDB", domain, "database found, loading:", existing_file, "\n")))
+                }
                 data <- fread(existing_file)
         }
 }
@@ -199,7 +205,9 @@ if (!file.exists("datasets") & !exists(quote(dataset_path))) {
         system("chmod +x datasets", ignore.stdout = TRUE, ignore.stderr = TRUE)
         cat(green("NCBI datasets CLI tool installed and made executable\n"))
 } else {
-        cat(green("NCBI datasets CLI tool found\n"))
+        if (verbose == TRUE) {
+                cat(green("NCBI datasets CLI tool found\n"))
+        }
 }
 
 ########################
