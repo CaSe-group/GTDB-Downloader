@@ -28,6 +28,7 @@ domain <- "bacteria"
 database_file <- NULL
 non_interactive <- FALSE
 report <- FALSE
+verbose <- FALSE
 
 ##################
 ## NOTE: 1. SRC ##
@@ -92,8 +93,11 @@ while (i <= length(args)) {
         } else if (args[i] %in% c("--report", "-r")) {
                 report <- TRUE
                 i <- i + 2
-        } else if (args[i] %in% c("--dataset_path ", "-dp")) {
+        } else if (args[i] %in% c("--dataset_path", "-dp")) {
                 dataset_path <- args[i + 1]
+                i <- i + 2
+        } else if (args[i] %in% c("--verbose", "-v")) {
+                verbose <- TRUE
                 i <- i + 2
         } else if (args[i] %in% c("--help", "-h")) {
                 cat("Usage: fasta_extractor [options]\n")
@@ -110,6 +114,7 @@ while (i <= length(args)) {
                 cat("  -dp, --dataset_path          Path to dataset tool (not required)\n")
                 cat("  -ni, --non_interactive       Do not ask for confirmation before downloading genomes\n")
                 cat("  -r, --report                 Create a report with each sample accession number and taxonomy\n")
+                cat("  -v, --verbose                Verbose command output\n")
                 cat("  -h, --help                   Show this help message\n")
                 quit()
         } else {
@@ -216,12 +221,16 @@ if (nrow(selection) == 0) {
                 paste0("ncbi_", get(taxrank)) == name_selection & gtdb_representative == representative,
                 c("ncbi_genbank_assembly_accession")
         ]
-        cat(yellow("No GTDB taxonomy name found falling back to NCBI taxonomical rank name\n"))
-        cat(yellow("For the optimal results please use GTDB taxonomy ranks\n"))
+        if (verbose == TRUE) {
+                cat(yellow("No GTDB taxonomy name found falling back to NCBI taxonomical rank name\n"))
+                cat(yellow("For the optimal results please use GTDB taxonomy ranks\n"))
+        }
 }
 
 if (nrow(selection) == 0) {
-        cat(yellow("No NCBI Species Taxid found falling back to NCBI Taxid\n"))
+        if (verbose == TRUE) {
+                cat(yellow("No NCBI Species Taxid found falling back to NCBI Taxid\n"))
+        }
         if (representative == "f") {
                 selection <- processed_data[
                         ncbi_taxid == name_selection,
@@ -234,16 +243,24 @@ if (nrow(selection) == 0) {
                                 gtdb_representative == representative,
                         c("ncbi_genbank_assembly_accession")
                 ]
-                cat(yellow(paste0(
-                        "Taxid used with GTDB representative genome...\n",
-                        "Guessing GTDB species using NCBI taxonomy\n",
-                        "Guessed species: ", ncbi_name, "\n"
-                )))
+
+                if (verbose == TRUE) {
+                        cat(yellow("Taxid used with GTDB representative genome...\n"))
+                }
+
+                if (nrow(selection) > 0) {
+                        cat(yellow(paste0(
+                                "Guessing GTDB species using NCBI taxonomy\n",
+                                "Guessed species: ", ncbi_name, "\n"
+                        )))
+                }
         }
 }
 
 if (nrow(selection) == 0) {
-        cat(yellow("No NCBI Taxid found falling back to Species Taxid \n"))
+        if (verbose == TRUE) {
+                cat(yellow("No NCBI Taxid found falling back to Species Taxid \n"))
+        }
         if (representative == "f") {
                 selection <- processed_data[
                         ncbi_species_taxid == name_selection & gtdb_representative == representative,
@@ -256,11 +273,17 @@ if (nrow(selection) == 0) {
                         c("ncbi_genbank_assembly_accession")
                 ]
 
-                cat(yellow(paste0(
-                        "Taxid used with GTDB representative genome...\n",
-                        "Guessing GTDB species using NCBI taxonomy\n",
-                        "Guessed species:", ncbi_name, "\n"
-                )))
+                if (verbose == TRUE) {
+                        cat(yellow("Taxid used with GTDB representative genome...\n"))
+                }
+
+                if (nrow(selection) > 0) {
+                        cat(yellow("Taxid used with GTDB representative genome...\n"))
+                        cat(yellow(paste0(
+                                "Guessing GTDB species using NCBI taxonomy\n",
+                                "Guessed species:", ncbi_name, "\n"
+                        )))
+                }
         }
 }
 
@@ -334,10 +357,21 @@ if (!exists(quote(dataset_path))) {
 } else {
         dataset_path_input <- paste0(dataset_path, " ")
 }
+if (verbose == TRUE) {
+        invisible(system(paste0(dataset_path_input, "download genome accession --inputfile download_accession_list.txt --dehydrated --include genome")))
+} else {
+        system(paste0(dataset_path_input, "download genome accession --inputfile download_accession_list.txt --dehydrated --include genome"))
+}
 
-system(paste0(dataset_path_input, "download genome accession --inputfile download_accession_list.txt --dehydrated --include genome"))
+
 unzip("ncbi_dataset.zip")
-system(paste0(dataset_path_input, "rehydrate --directory ."))
+
+if (verbose == TRUE) {
+        system(paste0(dataset_path_input, "rehydrate --directory ."))
+} else {
+        invisible(system(paste0(dataset_path_input, "rehydrate --directory .")))
+}
+
 dir.create(output_dir)
 invisible(file.rename(
         from = list.files(path = "ncbi_dataset/data/", pattern = "\\.fna$", recursive = TRUE, full.names = TRUE),
