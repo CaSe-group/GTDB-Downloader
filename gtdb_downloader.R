@@ -19,7 +19,7 @@ suppressMessages(
 args <- commandArgs(trailingOnly = TRUE)
 
 ### Defaults
-name_selection <- NULL
+name_selection <- "623"
 taxrank <- "species"
 representative <- "t"
 dryrun <- FALSE
@@ -70,7 +70,7 @@ while (i <= length(args)) {
                 taxrank <- args[i + 1]
                 i <- i + 2
         } else if (args[i] %in% c("--representative_check", "-r")) {
-                representative_check <- args[i + 1]
+                representative <- args[i + 1]
                 i <- i + 2
         } else if (args[i] %in% c("--dryrun", "-d")) {
                 dryrun <- TRUE
@@ -289,24 +289,29 @@ if (nrow(selection) == 0) {
 
 if (nrow(selection) == 0 & representative == "t") {
         ncbi_name <- processed_data[ncbi_species_taxid == name_selection, ncbi_species][1]
-        selection <- processed_data[
-                ncbi_species == ncbi_name & gtdb_representative == representative,
-                c("ncbi_genbank_assembly_accession")
+
+        gtdb_name <- processed_data[
+                ncbi_species == ncbi_name,
+                c("species")
         ]
-        if (nrow(selection) > 1) {
+        species_count <- as.data.frame(table(gtdb_name))
+        if (nrow(species_count) > 1 & nrow(species_count != 0)) {
                 setcolorder(processed_data, c("gtdb_taxonomy", "ncbi_taxonomy"), after = ncol(processed_data))
                 setcolorder(processed_data, "ncbi_genbank_assembly_accession", before = 1)
                 fwrite(processed_data[processed_data$ncbi_genbank_assembly_accession %in% selection$ncbi_genbank_assembly_accession, ], file = paste0(output_dir, "/ambiguise_samples_report.csv"))
                 cat(red(paste0("Ambiguise samples found based on pure NCBI taxonomy\n", "Sample count found: ", nrow(selection), "\n Ambiguise samples output printed to:", output_dir, "/ambiguise_samples_report.csv file")))
                 quit()
+        } else {
+                selection <- processed_data[
+                        species == gtdb_name[1] & gtdb_representative == "t",
+                        c("ncbi_genbank_assembly_accession")
+                ]
         }
+
         cat(green(paste0(
                 "Using pure NCBI taxonomy: ", "\n",
                 "NCBI Species:", ncbi_name, "\n",
-                "GTDB Species:", processed_data[
-                        ncbi_species == ncbi_name & gtdb_representative == representative,
-                        c("species")
-                ], "\n"
+                "GTDB Species:", gtdb_name[1], "\n"
         )))
 }
 
