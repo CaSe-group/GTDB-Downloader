@@ -1,41 +1,53 @@
-# NCBI Datasets
+# GTDB-Downloader
+Tool to download genomes from NCBI based on GTDB taxonomy.
 
-https://www.ncbi.nlm.nih.gov/datasets
+## Description
+This tool automates the download of bacterial and archaeal genomes from the GTDB (Genome Taxonomy Database) via NCBI accession. It retrieves genome assembly accessions matching a given taxonomic name, rank, and representative status, then uses the NCBI Datasets CLI tool to download the corresponding genomic data. The NCBI Datasets tool and GTDB database are downloaded and stored automatically. The tool supports dry runs and requires user confirmation before downloading samples.
 
-This zip archive contains an NCBI Datasets Data Package.
+## Dependencies
+- R
+- `data.table` R package (installed automatically if missing)
+- `R.utils` R package (installed automatically if missing)
 
-NCBI Datasets Data Packages can include sequence, annotation and other data files, and metadata in one or more data report files.
-Data report files are in JSON Lines format.
+## Usage
+```bash
+./gtdb_downloader.R -n <name> [options]
+```
 
----
-## FAQs
-### Where is the data I requested?
+## Parameters
 
-Your data is in the subdirectory `ncbi_dataset/data/` contained within this zip archive.
+### Required
+- `-n`, `--name`: Taxonomic name or identifier to query. Accepts GTDB name, NCBI name, NCBI taxid, or NCBI species taxid (e.g., `"Escherichia coli"`, `"562"`)
 
-### I still can't find my data, can you help?
+### Optional
+- `-t`, `--taxrank`: Taxonomic rank to search (default: `"species"`)
+  Options: `phylum`, `class`, `order`, `family`, `genus`, `species`
+- `-r`, `--representative_check`: Filter for GTDB representative genomes (default: `"t"`)
+  Options: `"t"` (yes), `"f"` (no)
+- `-m`, `--domain`: Biological domain (default: `"bacteria"`)
+  Options: `"bacteria"`, `"archaea"`
+- `-o`, `--output_dir`: Output directory (default: `"output"`)
+- `--report`: Create a report CSV with accession numbers and taxonomy for each downloaded sample (flag, no value needed)
+- `-d`, `--dryrun`: Preview number of matching genomes without downloading (flag, no value needed)
+- `-db`, `--database`: Path to a custom local GTDB metadata file
+- `-dp`, `--dataset_path`: Path to a pre-installed NCBI Datasets CLI binary (optional; downloaded automatically if not found)
+- `-ni`, `--non_interactive`: Skip confirmation prompt before downloading (flag, no value needed)
+- `-v`, `--verbose`: Print detailed command output (flag, no value needed)
 
-We have identified a bug affecting Mac Safari users. When downloading data from the NCBI Datasets web interface, you may see only this README file after the download has completed (while other files appear to be missing).
-As a workaround to prevent this issue from recurring, we recommend disabling automatic zip archive extraction in Safari until Apple releases a bug fix.
-For more information, visit:
-https://www.ncbi.nlm.nih.gov/datasets/docs/reference-docs/mac-zip-bug/
+## Example Commands
+```bash
+# Download representative genomes for a species
+./gtdb_downloader.R -n "Pseudomonas aeruginosa"
 
-### How do I work with JSON Lines data reports?
+# Download all genomes at genus level
+./gtdb_downloader.R -n "Pseudomonas" -t genus -r f
 
-Visit our JSON Lines data report documentation page:
-https://www.ncbi.nlm.nih.gov/datasets/docs/v2/tutorials/working-with-jsonl-data-reports/
+# Dry run to preview matches without downloading
+./gtdb_downloader.R -n "Escherichia coli" -d
 
-### What is NCBI Datasets?
+# Query by NCBI taxid with a report
+./gtdb_downloader.R -n 562 --report
+```
 
-NCBI Datasets is a resource that lets you easily gather data from across NCBI databases. Find and download gene, transcript, protein and genome sequences, annotation and metadata.
-
-### Where can I find NCBI Datasets documentation?
-
-Visit the NCBI Datasets documentation pages:
-https://www.ncbi.nlm.nih.gov/datasets/docs/
-
----
-
-National Center for Biotechnology Information
-National Library of Medicine
-info@ncbi.nlm.nih.gov
+## Acknowledgments
+This tool uses metadata from [**GTDB release 232**](https://gtdb.ecogenomic.org/) and the [**NCBI Datasets CLI**](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/command-line-tools/) to access the NCBI genome repository. We acknowledge the valuable contributions of the GTDB and NCBI teams in providing these resources.
