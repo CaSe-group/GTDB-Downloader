@@ -29,6 +29,8 @@ database_file <- NULL
 non_interactive <- FALSE
 report <- FALSE
 verbose <- FALSE
+### Sys check
+
 
 ##################
 ## NOTE: 1. SRC ##
@@ -165,11 +167,11 @@ if (!is.null(database_file)) {
         # NOTE: DATABASE UPDATE MODIFY JUST THIS LINES
         # Default GTDB database
         if (domain == "bacteria") {
-                default_files <- c("bac120_metadata_r226.tsv.gz", "bac120_metadata_r226.tsv")
-                download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release226/226.0/bac120_metadata_r226.tsv.gz"
+                default_files <- c("bac120_metadata_r232.tsv.gz", "bac120_metadata_r232.tsv")
+                download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release232/232.0/bac120_metadata_r232.tsv.gz"
         } else if (domain == "archaea") {
-                default_files <- c("ar53_metadata_r226.tsv.gz", "ar53_metadata_r226.tsv")
-                download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release226/226.0/ar53_metadata_r226.tsv.gz"
+                default_files <- c("ar53_metadata_r232.tsv.gz", "ar53_metadata_r232.tsv")
+                download_url <- "https://data.ace.uq.edu.au/public/gtdb/data/releases/release232/232.0/ar53_metadata_r232.tsv.gz"
         }
         ## File check
         file_detection <- list.files()
@@ -202,19 +204,45 @@ if (!is.null(database_file)) {
 }
 
 ## NCBI dataset
-if (!file.exists("datasets") & !exists(quote(dataset_path))) {
-        cat("Downloading NCBI datasets CLI tool...\n")
-        download.file(
-                "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets",
-                "datasets",
-                quiet = TRUE
-        )
-        system("chmod +x datasets", ignore.stdout = TRUE, ignore.stderr = TRUE)
-        cat(green("NCBI datasets CLI tool installed and made executable\n"))
-} else {
-        if (verbose == TRUE) {
-                cat(green("NCBI datasets CLI tool found\n"))
+if (!file.exists("datasets") && !file.exists("datasets.exe") && !exists(quote(dataset_path))) {
+    os <- Sys.info()["sysname"]
+    machine <- Sys.info()["machine"]
+    if (os == "Linux") {
+    # Linux
+        if (machine == "x86_64") {
+            download_url <- "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-amd64/datasets"
+        } else if (machine == "aarch64") {
+            download_url <- "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-arm64/datasets"
+        } else if (grepl("arm", machine, ignore.case = TRUE)) {
+            download_url <- "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/linux-arm/datasets"
+        } else {
+            stop("Unsupported Linux architecture: ", machine)
         }
+        output_file <- "datasets"
+    } else if (os == "Darwin") {
+        # Macos 
+        download_url <- "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/mac/datasets"
+        output_file <- "datasets"
+    } else if (os == "Windows") {
+      # Windows
+        download_url <- "https://ftp.ncbi.nlm.nih.gov/pub/datasets/command-line/v2/win64/datasets.exe"
+        output_file <- "datasets.exe"
+    } else {
+        stop("Unsupported operating system: ", os)
+    }
+
+    cat("Downloading NCBI datasets CLI tool for", os, "(", machine, ")...\n")
+    download.file(download_url, output_file, quiet = TRUE)
+
+    # Executable
+    if (os != "Windows") {
+        system("chmod +x datasets", ignore.stdout = TRUE, ignore.stderr = TRUE)
+    }
+    cat(green("NCBI datasets CLI tool installed and made executable\n"))
+} else {
+    if (verbose == TRUE) {
+        cat(green("NCBI datasets CLI tool found\n"))
+    }
 }
 
 ########################
@@ -311,7 +339,7 @@ if (nrow(selection) == 0 & representative == "t") {
                 c("species")
         ]
         species_count <- as.data.frame(table(gtdb_name))
-        if (nrow(species_count) > 1 | nrow(species_count == 0)) {
+        if (nrow(species_count) > 1 | nrow(species_count) == 0) {
                 cat(red(paste0(
                         "Ambiguous samples found based on pure NCBI taxonomy\n",
                         "Taxonomic ranks found: ", nrow(species_count), "\n",
@@ -408,7 +436,7 @@ if (report == TRUE) {
 }
 
 ## Cleanup
-rm_list <- c("download_accession_list.txt", "ncbi_dataset.zip", "md5sum.txt", "README.md")
+rm_list <- c("download_accession_list.txt", "ncbi_dataset.zip", "md5sum.txt")
 invisible(file.remove(rm_list))
 invisible(system("rm -r ncbi_dataset"))
 
